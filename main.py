@@ -8,7 +8,7 @@ from glfw import KEY_ESCAPE, PRESS, MOUSE_BUTTON_LEFT, RELEASE,\
                  window_should_close, poll_events, swap_buffers,\
                  terminate, set_window_should_close,\
                  get_cursor_pos, get_window_size
-from numpy import ones, array
+from numpy import ones, array, eye
 from imgui import begin_main_menu_bar, begin_menu, end_menu,\
                   end_main_menu_bar, begin, slider_float, end,\
                   menu_item, new_frame, render, get_draw_data,\
@@ -197,34 +197,29 @@ class Camera:
                                             array((1, 0, 0))) *\
                 Rotation.from_rotvec(self.rot_around_vertical *\
                                             array((0, 1, 0)))
-
         '''rot, rot1 = (*(\
                 Rotation.from_rotvec(self.rot_around_horizontal *\
            vec) for vec in (array((1, 0, 0)), array((0, 1, 0)))),)             
         self.rot = Rotation.identity() * rot * rot1'''
-        
-        viewMatrix = np.eye(4)
-        viewMatrix[:3,:3] = self.rot.as_matrix()
-        viewMatrix[0:3,3] = 0, 0, -self._zoom
+        viewMatrix = eye(4)
+        viewMatrix[:3, :3] = self.rot.as_matrix()
+        viewMatrix[:3, 3] = 0, 0, -self._zoom
         self.viewMatrix = viewMatrix
 
     def set_uniforms(self, program):
         if "uPerspectiveMatrix" in program:
             program["uPerspectiveMatrix"].write(self.perspectiveMatrix.T.astype('f4').tobytes())
+
         if "uViewMatrix" in program:
             program["uViewMatrix"].write(self.viewMatrix.T.astype('f4').tobytes())
 
     def start_rotation(self, x, y):
         self.previous_mouse_pos = x, y
 
-    def update_rotation(self, x, y):
-        if self.previous_mouse_pos is None:
-            return
-        sx, sy = self.previous_mouse_pos
-        dx = x - sx
-        dy = y - sy
-        self._rotate(dx, dy)
-        self.previous_mouse_pos = x, y
+    def update_rotation(self, *args): 
+        if self.previous_mouse_pos: 
+            self._rotate(*array(args) - self.previous_mouse_pos)
+            self.previous_mouse_pos = args
 
     def stop_rotation(self):
         self.previous_mouse_pos = None
