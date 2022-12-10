@@ -49,18 +49,21 @@ class RenderedMesh:
         self.vao.render(TRIANGLES)
 
 import glfw
-from glfw import init, create_window, make_context_current
-from glfw import set_key_callback,\
-                                 set_cursor_pos_callback,\
-                                 set_mouse_button_callback,\
-                                 set_window_size_callback,\
-                                 set_char_callback,\
-                                 set_scroll_callback
+from glfw import init, create_window, make_context_current,\
+                 set_key_callback, set_cursor_pos_callback,\
+                 set_mouse_button_callback,\
+                 set_window_size_callback, set_char_callback,\
+                 set_scroll_callback, terminate, get_time,\
+                 window_should_close, poll_events
 import moderngl
 from moderngl import create_context as mgl_C_C
 import imgui
 from imgui import create_context as imgui_C_C
+from imgui import new_frame, render, get_draw_data, get_io
 from imgui.integrations.glfw import GlfwRenderer as ImguiRenderer
+from glfw import swap_buffers, terminate,\
+                 set_window_should_close, get_cursor_pos,\
+                 get_window_size
 
 class App:
     def __init__(self, width = 640, height = 480,\
@@ -78,53 +81,79 @@ class App:
                 self.impl = ImguiRenderer(self.window,\
                                           attach_callbacks =\
                                           False)
-                
                 set_key_callback(self.window, self._on_key)
-                set_cursor_pos_callback(self.window, self._on_mouse_move)
-                set_mouse_button_callback(self.window, self._on_mouse_button)
-                set_window_size_callback(self.window, self._on_resize)
+                set_cursor_pos_callback(self.window,\
+                                        self._on_mouse_move)
+                set_mouse_button_callback(self.window,\
+                                          self._on_mouse_button)
+                set_window_size_callback(self.window,\
+                                         self._on_resize)
                 set_char_callback(self.window, self._on_char)
                 set_scroll_callback(self.window, self._on_scroll)
 
                 self.init()
             
-            else:
-                glfw.terminate()
+            else:   
+                terminate()
                 
     def main_loop(self):
-        previous_time = glfw.get_time()
+        previous_time = get_time()
 
         # Loop until the user closes the window
-        while not glfw.window_should_close(self.window):
-            glfw.poll_events()
+        while not window_should_close(self.window):
+            poll_events()
             self.impl.process_inputs()
 
-            current_time = glfw.get_time()
-            delta_time = current_time - previous_time
-            previous_time = current_time
+            current_time = get_time()
+            delta_time, previous_time =\
+                        current_time - previous_time, current_time
+
             self.update(current_time, delta_time)
             self.render()
-
-            imgui.new_frame()
+            new_frame()
             self.ui()
-            imgui.render()
-            self.impl.render(imgui.get_draw_data())
-
-            glfw.swap_buffers(self.window)
+            render()
+            self.impl.render(get_draw_data())    
+            swap_buffers(self.window)
 
         self.impl.shutdown()
-        glfw.terminate()
+        terminate()
 
     def should_close(self):
-        glfw.set_window_should_close(self.window, True)
+        set_window_should_close(self.window, True)
 
     def mouse_pos(self):
-        return glfw.get_cursor_pos(self.window)
+        return get_cursor_pos(self.window)
 
     def size(self):
-        return glfw.get_window_size(self.window)
+        return get_window_size(self.window)
 
-    def init(self):
+    def _on_key(self, window, key, scancode, action, mods):
+        self.impl.keyboard_callback(window, key, scancode,\
+                                    action, mods)
+        self.on_key(key, scancode, action, mods)
+
+    def _on_char(self, window, codepoint):
+        self.impl.char_callback(window, codepoint)
+        self.on_char(codepoint)
+
+    def _on_mouse_move(self, window, x, y):
+        self.impl.mouse_callback(window, x, y)
+        self.on_mouse_move(x, y)
+
+    def _on_mouse_button(self, window, button, action, mods):
+        if not get_io().want_capture_mouse:
+            self.on_mouse_button(button, action, mods)
+
+    def _on_scroll(self, window, xoffset, yoffset):
+        self.impl.scroll_callback(window, xoffset, yoffset)
+        self.on_scroll(xoffset, yoffset)
+
+    def _on_resize(self, window, width, height):
+        self.impl.resize_callback(window, width, height)
+        self.on_resize(width, height)
+
+    '''def init(self):
         pass
 
     def update(self, time):
@@ -136,47 +165,23 @@ class App:
     def ui(self):
         pass
 
-    def _on_key(self, window, key, scancode, action, mods):
-        self.impl.keyboard_callback(window, key, scancode, action, mods)
-        self.on_key(key, scancode, action, mods)
-
     def on_key(self, key, scancode, action, mods):
         pass
-
-    def _on_char(self, window, codepoint):
-        self.impl.char_callback(window, codepoint)
-        self.on_char(codepoint)
 
     def on_char(self, codepoint):
         pass
 
-    def _on_mouse_move(self, window, x, y):
-        self.impl.mouse_callback(window, x, y)
-        self.on_mouse_move(x, y)
-
     def on_mouse_move(self, x, y):
         pass
-
-    def _on_mouse_button(self, window, button, action, mods):
-        if not imgui.get_io().want_capture_mouse:
-            self.on_mouse_button(button, action, mods)
 
     def on_mouse_button(self, button, action, mods):
         pass
 
-    def _on_scroll(self, window, xoffset, yoffset):
-        self.impl.scroll_callback(window, xoffset, yoffset)
-        self.on_scroll(xoffset, yoffset)
-
     def on_scroll(self, xoffset, yoffset):
         pass
 
-    def _on_resize(self, window, width, height):
-        self.impl.resize_callback(window, width, height)
-        self.on_resize(width, height)
-
     def on_resize(self, width, height):
-        pass
+        pass'''
 
 import numpy as np
 from scipy.spatial.transform import Rotation
