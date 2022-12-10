@@ -8,7 +8,7 @@ from glfw import KEY_ESCAPE, PRESS, MOUSE_BUTTON_LEFT, RELEASE,\
                  window_should_close, poll_events, swap_buffers,\
                  terminate, set_window_should_close,\
                  get_cursor_pos, get_window_size
-from numpy import ones, array, eye
+from numpy import ones, array, eye, tan, radians, clip, pi
 from imgui import begin_main_menu_bar, begin_menu, end_menu,\
                   end_main_menu_bar, begin, slider_float, end,\
                   menu_item, new_frame, render, get_draw_data,\
@@ -18,6 +18,7 @@ from moderngl import create_context as mgl_C_C
 from imgui import    create_context as imgui_C_C
 from imgui.integrations.glfw import GlfwRenderer
 from pywavefront import Wavefront
+from scipy.spatial.transform import Rotation
 
 class Mesh:
     """Simply contains an array of triangles and an array of normals.
@@ -150,9 +151,7 @@ class App:
     def on_char(self, codepoint): #necesario
         pass
 
-import numpy as np
-from scipy.spatial.transform import Rotation
-from numpy import array, tan, radians
+
 
 def _perspective(n, f, t, b, l, r):
     return array(((2 / (r - l) * n, 0, (r + l) / (r - l), 0),
@@ -224,7 +223,6 @@ class Camera:
         self.previous_mouse_pos = None
 
     def _rotate(self, dx, dy):
-        from numpy import clip, pi
         self.rot_around_vertical += dx * self.sensitivity
         self.rot_around_horizontal += dy * self.sensitivity
         pi_Medios = pi / 2
