@@ -189,7 +189,7 @@ class Camera:
         self._zoom *= (1 - self.zoom_sensitivity) ** steps
 
     def update(self, time, delta_time):
-        if self.previous_mouse_pos is None and self.angular_velocity is not None:
+        if self.angular_velocity and not self.previous_mouse_pos: #!!!!!!'''
             self._damping()
 
         self.rot = Rotation.identity()
