@@ -49,31 +49,32 @@ class MyApp(App):
             return max(0, dot(v, v1));
         }
 
+        vec3 get_C(vec3 lightpos, vec3 v_position, vec3 n, vec3 c,\
+                  vec4 uColor, vec3 lightcolor, vec3 r, vec3 v,\
+                  float uHardness, float spec) {
+            vec3 l = normalize(lightpos - v_position);
+            float s = get_Max_Dot(n, l);
+            c += uColor.rgb * s * lightcolor;
+
+            if (s > 0) {
+                r = reflect(-l, n);
+                spec = pow(get_Max_Dot(v, r), uHardness);
+                c += spec * lightcolor;
+            }
+
+            return c;
+        }
+            
         void main() {
             // This is a very basic lighting, for visualization only //
             vec3 viewpos = inverse(uViewMatrix)[3].xyz,\
             n = normalize(v_normal), c = uColor.rgb * ambient,\
-                     v = normalize(viewpos - v_position),\
-                     l = normalize(lightpos0 - v_position), r;
-            float s = get_Max_Dot(n, l), spec = 0;
-        
-            c += uColor.rgb * s * lightcolor0;
-
-            if (s > 0) {
-                r = reflect(-l, n);
-                spec = pow(get_Max_Dot(v, r), uHardness);
-                c += spec * lightcolor0;
-            }
-
-            l = normalize(lightpos1 - v_position);
-            s = get_Max_Dot(n, l);
-            c += uColor.rgb * s * lightcolor1;
-
-            if (s > 0) {
-                r = reflect(-l, n);
-                spec = pow(get_Max_Dot(v, r), uHardness);
-                c += spec * lightcolor1;
-            }
+                     v = normalize(viewpos - v_position), r;
+            float spec = 0;
+ 
+            c = get_C(lightpos1, v_position, n, get_C(lightpos0, v_position, n, c, uColor,\
+                 lightcolor0, r, v, uHardness, spec), uColor,\
+                 lightcolor1, r, v, uHardness, spec); //lado, lado1, recursiva -> iterativa
 
             f_color = vec4(c / 2, uColor.a);
         }''')
