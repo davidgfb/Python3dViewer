@@ -1,13 +1,10 @@
 from moderngl import DEPTH_TEST, CULL_FACE, TRIANGLES
 from glfw import KEY_ESCAPE, PRESS, MOUSE_BUTTON_LEFT, RELEASE,\
                  MOUSE_BUTTON_LEFT
-from numpy import ones
+from numpy import ones, array
 from imgui import begin_main_menu_bar, begin_menu, end_menu,\
                   end_main_menu_bar, begin, slider_float, end,\
                   menu_item
-
-import numpy as np
-from numpy import array
 from pywavefront import Wavefront
 
 class Mesh:
@@ -24,13 +21,11 @@ class ObjMesh(Mesh):
 
         scene = Wavefront(filepath)
 
-        for name, material in scene.materials.items():
+        for name, material in scene.materials.items():        
             assert(material.vertex_format == "N3F_V3F")  # T2F, C3F, N3F and V3F may appear in this string
             
             data = array(material.vertices).reshape(-1, 6)
             self.P, self.N = data[:,3:], data[:,:3]
-
-            break
 
         print(f"(Object has {len(self.P)//3} points)")
 
@@ -45,14 +40,13 @@ class RenderedMesh:
                                 [(self.vboP, "3f", "in_vert"),\
                                  (self.vboN, "3f", "in_normal")])
 
-    def release(self):
+    def release(self): #?
         self.vboP.release()
         self.vboN.release()
         self.vao.release()
 
     def render(self, ctx):
         self.vao.render(TRIANGLES)
-
 
 import glfw
 import moderngl
