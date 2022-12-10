@@ -21,11 +21,11 @@ class ObjMesh(Mesh):
 
         scene = Wavefront(filepath)
 
-        for name, material in scene.materials.items():        
+        for name, material in scene.materials.items(): #una vez       
             assert(material.vertex_format == "N3F_V3F")  # T2F, C3F, N3F and V3F may appear in this string
             
             data = array(material.vertices).reshape(-1, 6)
-            self.P, self.N = data[:,3:], data[:,:3]
+            self.P, self.N = data[:, 3:], data[:, :3]
 
         print(f"(Object has {len(self.P)//3} points)")
 
@@ -49,36 +49,48 @@ class RenderedMesh:
         self.vao.render(TRIANGLES)
 
 import glfw
+from glfw import init, create_window, make_context_current
+from glfw import set_key_callback,\
+                                 set_cursor_pos_callback,\
+                                 set_mouse_button_callback,\
+                                 set_window_size_callback,\
+                                 set_char_callback,\
+                                 set_scroll_callback
 import moderngl
+from moderngl import create_context as mgl_C_C
 import imgui
+from imgui import create_context as imgui_C_C
 from imgui.integrations.glfw import GlfwRenderer as ImguiRenderer
 
 class App:
-    def __init__(self, width = 640, height = 480, title = "Hello world"):
-        imgui.create_context()
+    def __init__(self, width = 640, height = 480,\
+                 title = "Hello world"):    
+        imgui_C_C()
 
-        if not glfw.init():
-            return
-        
-        self.window = glfw.create_window(width, height, title, None, None)
-        if not self.window:
-            glfw.terminate()
-            return
+        if init():
+            self.window = create_window(width, height, title,\
+                                        None, None)
 
-        glfw.make_context_current(self.window)
-        self.ctx = moderngl.create_context(require=460)
+            if self.window:
+                make_context_current(self.window)
+                
+                self.ctx = mgl_C_C(require = 460)
+                self.impl = ImguiRenderer(self.window,\
+                                          attach_callbacks =\
+                                          False)
+                
+                set_key_callback(self.window, self._on_key)
+                set_cursor_pos_callback(self.window, self._on_mouse_move)
+                set_mouse_button_callback(self.window, self._on_mouse_button)
+                set_window_size_callback(self.window, self._on_resize)
+                set_char_callback(self.window, self._on_char)
+                set_scroll_callback(self.window, self._on_scroll)
 
-        self.impl = ImguiRenderer(self.window, attach_callbacks=False)
-        
-        glfw.set_key_callback(self.window, self._on_key)
-        glfw.set_cursor_pos_callback(self.window, self._on_mouse_move)
-        glfw.set_mouse_button_callback(self.window, self._on_mouse_button)
-        glfw.set_window_size_callback(self.window, self._on_resize)
-        glfw.set_char_callback(self.window, self._on_char)
-        glfw.set_scroll_callback(self.window, self._on_scroll)
-
-        self.init()
-
+                self.init()
+            
+            else:
+                glfw.terminate()
+                
     def main_loop(self):
         previous_time = glfw.get_time()
 
