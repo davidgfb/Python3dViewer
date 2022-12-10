@@ -6,7 +6,56 @@ from imgui import begin_main_menu_bar, begin_menu, end_menu,\
                   end_main_menu_bar, begin, slider_float, end,\
                   menu_item
 
-from augen.mesh import ObjMesh, RenderedMesh
+import numpy as np
+from moderngl import TRIANGLES
+
+class Mesh:
+    """Simply contains an array of triangles and an array of normals.
+    Could be enhanced, for instance with an element buffer"""
+    def __init__(self, P, N):
+        self.P = P
+        self.N = N
+
+
+class ObjMesh(Mesh):
+    """An example of mesh loader, using the pywavefront module.
+    Only load the first mesh of the file if there are more than one."""
+    def __init__(self, filepath):
+        import pywavefront
+        print(f"Loading mesh from {filepath}...")
+        scene = pywavefront.Wavefront(filepath)
+        for name, material in scene.materials.items():
+            assert(material.vertex_format == "N3F_V3F")  # T2F, C3F, N3F and V3F may appear in this string
+            data = np.array(material.vertices).reshape(-1, 6)
+            self.P = data[:,3:]
+            self.N = data[:,:3]
+            break
+        print(f"(Object has {len(self.P)//3} points)")
+
+
+class RenderedMesh:
+    """The equivalent of a Mesh, but stored in OpenGL buffers (on the GPU)
+    ready to be rendered."""
+    def __init__(self, ctx, mesh, program):
+        self.mesh = mesh
+        self.vboP = ctx.buffer(mesh.P.astype('f4').tobytes())
+        self.vboN = ctx.buffer(mesh.N.astype('f4').tobytes())
+        self.vao = ctx.vertex_array(
+            program,
+            [
+                (self.vboP, "3f", "in_vert"),
+                (self.vboN, "3f", "in_normal"),
+            ]
+        )
+
+    def release(self):
+        self.vboP.release()
+        self.vboN.release()
+        self.vao.release()
+
+    def render(self, ctx):
+        self.vao.render(TRIANGLES)
+
 
 import glfw
 import moderngl
