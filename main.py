@@ -5,8 +5,216 @@ from numpy import ones
 from imgui import begin_main_menu_bar, begin_menu, end_menu,\
                   end_main_menu_bar, begin, slider_float, end,\
                   menu_item
-from augen import App, Camera
+
 from augen.mesh import ObjMesh, RenderedMesh
+
+import glfw
+import moderngl
+import imgui
+from imgui.integrations.glfw import GlfwRenderer as ImguiRenderer
+
+class App:
+    def __init__(self, width = 640, height = 480, title = "Hello world"):
+        imgui.create_context()
+
+        if not glfw.init():
+            return
+        
+        self.window = glfw.create_window(width, height, title, None, None)
+        if not self.window:
+            glfw.terminate()
+            return
+
+        glfw.make_context_current(self.window)
+        self.ctx = moderngl.create_context(require=460)
+
+        self.impl = ImguiRenderer(self.window, attach_callbacks=False)
+        
+        glfw.set_key_callback(self.window, self._on_key)
+        glfw.set_cursor_pos_callback(self.window, self._on_mouse_move)
+        glfw.set_mouse_button_callback(self.window, self._on_mouse_button)
+        glfw.set_window_size_callback(self.window, self._on_resize)
+        glfw.set_char_callback(self.window, self._on_char)
+        glfw.set_scroll_callback(self.window, self._on_scroll)
+
+        self.init()
+
+    def main_loop(self):
+        previous_time = glfw.get_time()
+
+        # Loop until the user closes the window
+        while not glfw.window_should_close(self.window):
+            glfw.poll_events()
+            self.impl.process_inputs()
+
+            current_time = glfw.get_time()
+            delta_time = current_time - previous_time
+            previous_time = current_time
+            self.update(current_time, delta_time)
+            self.render()
+
+            imgui.new_frame()
+            self.ui()
+            imgui.render()
+            self.impl.render(imgui.get_draw_data())
+
+            glfw.swap_buffers(self.window)
+
+        self.impl.shutdown()
+        glfw.terminate()
+
+    def should_close(self):
+        glfw.set_window_should_close(self.window, True)
+
+    def mouse_pos(self):
+        return glfw.get_cursor_pos(self.window)
+
+    def size(self):
+        return glfw.get_window_size(self.window)
+
+    def init(self):
+        pass
+
+    def update(self, time):
+        pass
+
+    def render(self):
+        pass
+
+    def ui(self):
+        pass
+
+    def _on_key(self, window, key, scancode, action, mods):
+        self.impl.keyboard_callback(window, key, scancode, action, mods)
+        self.on_key(key, scancode, action, mods)
+
+    def on_key(self, key, scancode, action, mods):
+        pass
+
+    def _on_char(self, window, codepoint):
+        self.impl.char_callback(window, codepoint)
+        self.on_char(codepoint)
+
+    def on_char(self, codepoint):
+        pass
+
+    def _on_mouse_move(self, window, x, y):
+        self.impl.mouse_callback(window, x, y)
+        self.on_mouse_move(x, y)
+
+    def on_mouse_move(self, x, y):
+        pass
+
+    def _on_mouse_button(self, window, button, action, mods):
+        if not imgui.get_io().want_capture_mouse:
+            self.on_mouse_button(button, action, mods)
+
+    def on_mouse_button(self, button, action, mods):
+        pass
+
+    def _on_scroll(self, window, xoffset, yoffset):
+        self.impl.scroll_callback(window, xoffset, yoffset)
+        self.on_scroll(xoffset, yoffset)
+
+    def on_scroll(self, xoffset, yoffset):
+        pass
+
+    def _on_resize(self, window, width, height):
+        self.impl.resize_callback(window, width, height)
+        self.on_resize(width, height)
+
+    def on_resize(self, width, height):
+        pass
+
+import numpy as np
+from scipy.spatial.transform import Rotation
+
+
+import numpy as np
+
+def _perspective(n, f, t, b, l, r):
+    return np.array([
+        [ 2*n/(r-l),     0    ,   (r+l)/(r-l) ,       0        ],
+        [     0    , 2*n/(t-b),   (t+b)/(t-b) ,       0        ],
+        [     0    ,     0    , -((f+n)/(f-n)), -(2*n*f/(f-n)) ],
+        [     0    ,     0    ,       -1      ,       0        ],
+    ])
+
+def perspective(fovy, aspect, near, far):
+    top = near * np.tan(fovy / 2)
+    right = top * aspect
+    return _perspective(near, far, top, -top, -right, right)
+
+
+
+class Camera:
+    def __init__(self, width, height):
+        self.sensitivity = 0.01
+        self.zoom_sensitivity = 0.1
+        self.momentum = 0.93
+
+        self._zoom = 2
+        self.rot = Rotation.identity()
+        self.previous_mouse_pos = None
+        self.angular_velocity = None
+        self.rot_around_vertical = 0
+        self.rot_around_horizontal = 0
+        self.resize(width, height)
+
+    def resize(self, width, height):
+        self.perspectiveMatrix = perspective(np.radians(80), width/height, 0.01, 100.0)
+
+    def zoom(self, steps):
+        self._zoom *= pow(1 - self.zoom_sensitivity, steps)
+
+    def update(self, time, delta_time):
+        if self.previous_mouse_pos is None and self.angular_velocity is not None:
+            self._damping()
+
+        self.rot = Rotation.identity()
+        self.rot *= Rotation.from_rotvec(self.rot_around_horizontal * np.array([1,0,0]))
+        self.rot *= Rotation.from_rotvec(self.rot_around_vertical * np.array([0,1,0]))
+
+        viewMatrix = np.eye(4)
+        viewMatrix[:3,:3] = self.rot.as_matrix()
+        viewMatrix[0:3,3] = 0, 0, -self._zoom
+        self.viewMatrix = viewMatrix
+
+    def set_uniforms(self, program):
+        if "uPerspectiveMatrix" in program:
+            program["uPerspectiveMatrix"].write(self.perspectiveMatrix.T.astype('f4').tobytes())
+        if "uViewMatrix" in program:
+            program["uViewMatrix"].write(self.viewMatrix.T.astype('f4').tobytes())
+
+    def start_rotation(self, x, y):
+        self.previous_mouse_pos = x, y
+
+    def update_rotation(self, x, y):
+        if self.previous_mouse_pos is None:
+            return
+        sx, sy = self.previous_mouse_pos
+        dx = x - sx
+        dy = y - sy
+        self._rotate(dx, dy)
+        self.previous_mouse_pos = x, y
+
+    def stop_rotation(self):
+        self.previous_mouse_pos = None
+
+    def _rotate(self, dx, dy):
+        self.rot_around_vertical += dx * self.sensitivity
+        self.rot_around_horizontal += dy * self.sensitivity
+        self.rot_around_horizontal = np.clip(self.rot_around_horizontal, -np.pi / 2, np.pi / 2)
+        self.angular_velocity = dx, dy
+
+    def _damping(self):
+        dx, dy = self.angular_velocity
+        if dx * dx + dy * dy < 1e-6:
+            self.angular_velocity = None
+        else:
+            self._rotate(dx * self.momentum, dy * self.momentum)
+
+
 
 class MyApp(App):
     def init(self):
