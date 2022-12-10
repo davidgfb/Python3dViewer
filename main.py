@@ -1,10 +1,10 @@
-import moderngl
-import struct
-import glfw
-import numpy as np
-from imgui import begin_main_menu_bar, begin_menu,\
-             end_menu, end_main_menu_bar, begin, slider_float,\
-             end, menu_item
+from moderngl import DEPTH_TEST, CULL_FACE
+from glfw import KEY_ESCAPE, PRESS, MOUSE_BUTTON_LEFT, RELEASE,\
+                 MOUSE_BUTTON_LEFT
+from numpy import ones
+from imgui import begin_main_menu_bar, begin_menu, end_menu,\
+                  end_main_menu_bar, begin, slider_float, end,\
+                  menu_item
 from augen import App, Camera
 from augen.mesh import ObjMesh, RenderedMesh
 
@@ -78,17 +78,13 @@ class MyApp(App):
 
             f_color = vec4(c / 2, uColor.a);
         }''')
-
         # Create the rendered mesh from the mesh and the program
-        self.rendered_mesh = RenderedMesh(ctx, self.mesh, self.program)
-
         # Setup camera
-        w, h = self.size()
-        self.camera = Camera(w, h)
-
+        self.rendered_mesh, (w, h) = RenderedMesh(ctx, self.mesh,\
+                                        self.program), self.size()
         # Initialize some value used in the UI
-        self.some_slider = 0.42
-
+        self.camera, self.some_slider = Camera(w, h), 0.42
+        
     def update(self, time, delta_time):
         # Update damping effect (and internal matrices)
         self.camera.update(time, delta_time)
@@ -96,24 +92,22 @@ class MyApp(App):
     def render(self):
         ctx = self.ctx
         self.camera.set_uniforms(self.program)
-
-        ctx.screen.clear(1.0, 1.0, 1.0, -1.0)
-
-        ctx.enable_only(moderngl.DEPTH_TEST | moderngl.CULL_FACE)
+        ctx.screen.clear(*ones(3), -1) 
+        ctx.enable_only(DEPTH_TEST | CULL_FACE)
         self.rendered_mesh.render(ctx)
 
     def on_key(self, key, scancode, action, mods):
-        if key == glfw.KEY_ESCAPE:
+        if key == KEY_ESCAPE:
             self.should_close()
 
     def on_mouse_move(self, x, y):
         self.camera.update_rotation(x, y)
 
     def on_mouse_button(self, button, action, mods):
-        if action == glfw.PRESS and button == glfw.MOUSE_BUTTON_LEFT:
-            x, y = self.mouse_pos()
-            self.camera.start_rotation(x, y)
-        if action == glfw.RELEASE and button == glfw.MOUSE_BUTTON_LEFT:
+        if action == PRESS and button == MOUSE_BUTTON_LEFT:
+            self.camera.start_rotation(*self.mouse_pos())
+
+        if action == RELEASE and button == MOUSE_BUTTON_LEFT:
             self.camera.stop_rotation()
 
     def on_resize(self, width, height):
@@ -145,7 +139,6 @@ class MyApp(App):
 
         end()
 
-app = MyApp(1280, 720, "Python 3d Viewer - Elie Michel")
-app.main_loop()
+MyApp(1280, 720, "Python 3d Viewer - Elie Michel").main_loop()
 
 
