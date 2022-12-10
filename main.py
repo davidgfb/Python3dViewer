@@ -1,31 +1,10 @@
-# This file is part of Python 3D Viewer
-#
-# Copyright (c) 2020 -- Élie Michel <elie.michel@exppad.com>
-# 
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to
-# deal in the Software without restriction, including without limitation the
-# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-# sell copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-# 
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# The Software is provided "as is", without warranty of any kind, express or
-# implied, including but not limited to the warranties of merchantability,
-# fitness for a particular purpose and non-infringement. In no event shall the
-# authors or copyright holders be liable for any claim, damages or other
-# liability, whether in an action of contract, tort or otherwise, arising
-# from, out of or in connection with the software or the use or other dealings
-# in the Software.
-
 import moderngl
 import struct
 import glfw
-import imgui
 import numpy as np
-
+from imgui import begin_main_menu_bar, begin_menu,\
+             end_menu, end_main_menu_bar, begin, slider_float,\
+             end, menu_item
 from augen import App, Camera
 from augen.mesh import ObjMesh, RenderedMesh
 
@@ -36,10 +15,69 @@ class MyApp(App):
         self.mesh = ObjMesh("sample-data/dragon.obj")
 
         # Load the glsl program
-        self.program = ctx.program(
-            vertex_shader=open("shaders/mesh.vert.glsl").read(),
-            fragment_shader=open("shaders/mesh.frag.glsl").read(),
-        )
+        self.program = ctx.program(vertex_shader=\
+        '''#version 460
+        in vec3 in_vert;
+        in vec3 in_normal;
+
+        out vec3 v_normal;
+        out vec3 v_position;
+
+        uniform mat4 uPerspectiveMatrix;
+        uniform mat4 uViewMatrix;
+
+        void main() {
+            v_normal = in_normal;
+            v_position = in_vert;
+            gl_Position = uPerspectiveMatrix * uViewMatrix * vec4(v_position, 1.0);
+        }''', fragment_shader=\
+        '''#version 460
+        in vec3 v_normal;
+        in vec3 v_position;
+
+        out vec4 f_color;
+
+        uniform vec4 uColor = vec4(1.0, 0.5, 0.1, 1.0);
+        uniform mat4 uViewMatrix;
+        uniform float uHardness = 16.0;
+
+        const vec3 lightpos0 = vec3(22.0, 16.0, 50.0);
+        const vec3 lightcolor0 = vec3(1.0, 0.95, 0.9);
+        const vec3 lightpos1 = vec3(-22.0, -8.0, -50.0);
+        const vec3 lightcolor1 = vec3(0.9, 0.95, 1.0);
+        const vec3 ambient = vec3(1.0);
+
+        void main() {
+            vec3 viewpos = inverse(uViewMatrix)[3].xyz;
+
+            // This is a very basic lighting, for visualization only //
+
+            vec3 n = normalize(v_normal);
+            vec3 c = uColor.rgb * ambient;
+            vec3 v = normalize(viewpos - v_position);
+            vec3 l, r;
+            float s, spec;
+
+            l = normalize(lightpos0 - v_position);
+            s = max(0.0, dot(n, l));
+            c += uColor.rgb * s * lightcolor0;
+            if (s > 0) {
+                r = reflect(-l, n);
+                spec = pow(max(0.0, dot(v, r)), uHardness);
+                c += spec * lightcolor0;
+            }
+
+            l = normalize(lightpos1 - v_position);
+            s = max(0.0, dot(n, l));
+            c += uColor.rgb * s * lightcolor1;
+            if (s > 0) {
+                r = reflect(-l, n);
+                spec = pow(max(0.0, dot(v, r)), uHardness);
+                c += spec * lightcolor1;
+            }
+
+            f_color = vec4(c * 0.5, uColor.a);
+        }''')
 
         # Create the rendered mesh from the mesh and the program
         self.rendered_mesh = RenderedMesh(ctx, self.mesh, self.program)
@@ -87,32 +125,27 @@ class MyApp(App):
 
     def ui(self):
         """Use the imgui module here to draw the UI"""
-        if imgui.begin_main_menu_bar():
-            if imgui.begin_menu("File", True):
-
-                clicked_quit, selected_quit = imgui.menu_item(
-                    "Quit", 'Esc', False, True
-                )
+        if begin_main_menu_bar():
+            if begin_menu("File", True):
+                clicked_quit, selected_quit =\
+                    menu_item("Quit", 'Esc', False, True)
 
                 if clicked_quit:
                     self.should_close()
 
-                imgui.end_menu()
-            imgui.end_main_menu_bar()
+                end_menu()
 
-        imgui.begin("Hello, world!", True)
+            end_main_menu_bar()
+
+        begin("Hello, world!", True)
         self.shape_need_update = False
-        changed, self.some_slider = imgui.slider_float(
-            "Some Slider", self.some_slider,
-            min_value=0.0, max_value=1.0,
-            format="%.02f"
-        )
-        imgui.end()
+        changed, self.some_slider =\
+                 slider_float("Some Slider", self.some_slider,
+                   min_value = 0, max_value = 1, format = "%.02f")
 
-def main():
-    app = MyApp(1280, 720, "Python 3d Viewer - Elie Michel")
-    app.main_loop()
+        end()
 
-if __name__ == "__main__":
-    main()
+app = MyApp(1280, 720, "Python 3d Viewer - Elie Michel")
+app.main_loop()
+
 
