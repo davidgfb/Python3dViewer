@@ -12,71 +12,70 @@ class MyApp(App):
     def init(self):
         ctx = self.ctx
         # Load a mesh
-        self.mesh = ObjMesh("sample-data/dragon.obj")
-
         # Load the glsl program
-        self.program = ctx.program(vertex_shader=\
+        self.mesh, self.program =\
+                   ObjMesh("sample-data/dragon.obj"),\
+                   ctx.program(vertex_shader =\
         '''#version 460
-        in vec3 in_vert;
-        in vec3 in_normal;
+        in vec3 in_vert, in_normal;
 
-        out vec3 v_normal;
-        out vec3 v_position;
+        out vec3 v_normal, v_position;
 
-        uniform mat4 uPerspectiveMatrix;
-        uniform mat4 uViewMatrix;
+        uniform mat4 uPerspectiveMatrix = mat4(0),\
+                     uViewMatrix = mat4(0);
 
         void main() {
             v_normal = in_normal;
             v_position = in_vert;
-            gl_Position = uPerspectiveMatrix * uViewMatrix * vec4(v_position, 1.0);
+            gl_Position = uPerspectiveMatrix * uViewMatrix *\
+                          vec4(v_position, 1);
         }''', fragment_shader=\
         '''#version 460
-        in vec3 v_normal;
-        in vec3 v_position;
+        in vec3 v_normal, v_position;
 
         out vec4 f_color;
 
-        uniform vec4 uColor = vec4(1.0, 0.5, 0.1, 1.0);
-        uniform mat4 uViewMatrix;
-        uniform float uHardness = 16.0;
+        uniform vec4 uColor = vec4(1, 0.5, 0.1, 1);
+        uniform mat4 uViewMatrix = mat4(0);
+        uniform float uHardness = 16;
 
-        const vec3 lightpos0 = vec3(22.0, 16.0, 50.0);
-        const vec3 lightcolor0 = vec3(1.0, 0.95, 0.9);
-        const vec3 lightpos1 = vec3(-22.0, -8.0, -50.0);
-        const vec3 lightcolor1 = vec3(0.9, 0.95, 1.0);
-        const vec3 ambient = vec3(1.0);
+        const vec3 lightpos0 = vec3(22, 16, 50),\
+                   lightcolor0 = vec3(1, 0.95, 0.9),\
+                   lightpos1 = vec3(-22, -8, -50),\
+                   lightcolor1 = vec3(0.9, 0.95, 1),\
+                   ambient = vec3(1);
+
+        float get_Max_Dot(vec3 v, vec3 v1) {
+            return max(0, dot(v, v1));
+        }
 
         void main() {
-            vec3 viewpos = inverse(uViewMatrix)[3].xyz;
-
             // This is a very basic lighting, for visualization only //
-
-            vec3 n = normalize(v_normal);
-            vec3 c = uColor.rgb * ambient;
-            vec3 v = normalize(viewpos - v_position);
-            vec3 l, r;
-            float s, spec;
-
-            l = normalize(lightpos0 - v_position);
-            s = max(0.0, dot(n, l));
+            vec3 viewpos = inverse(uViewMatrix)[3].xyz,\
+            n = normalize(v_normal), c = uColor.rgb * ambient,\
+                     v = normalize(viewpos - v_position),\
+                     l = normalize(lightpos0 - v_position), r;
+            float s = get_Max_Dot(n, l), spec = 0;
+        
             c += uColor.rgb * s * lightcolor0;
+
             if (s > 0) {
                 r = reflect(-l, n);
-                spec = pow(max(0.0, dot(v, r)), uHardness);
+                spec = pow(get_Max_Dot(v, r), uHardness);
                 c += spec * lightcolor0;
             }
 
             l = normalize(lightpos1 - v_position);
-            s = max(0.0, dot(n, l));
+            s = get_Max_Dot(n, l);
             c += uColor.rgb * s * lightcolor1;
+
             if (s > 0) {
                 r = reflect(-l, n);
-                spec = pow(max(0.0, dot(v, r)), uHardness);
+                spec = pow(get_Max_Dot(v, r), uHardness);
                 c += spec * lightcolor1;
             }
 
-            f_color = vec4(c * 0.5, uColor.a);
+            f_color = vec4(c / 2, uColor.a);
         }''')
 
         # Create the rendered mesh from the mesh and the program
