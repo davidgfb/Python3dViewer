@@ -22,8 +22,8 @@ from pywavefront import Wavefront
 class Mesh:
     """Simply contains an array of triangles and an array of normals.
     Could be enhanced, for instance with an element buffer"""
-    def __init__(self, P, N):
-        self.P, self.N = P, N
+    def __init__(self, *args): 
+        self.P, self.N = args 
 
 class ObjMesh(Mesh):
     """An example of mesh loader, using the pywavefront module.
@@ -123,30 +123,29 @@ class App:
     def size(self):
         return get_window_size(self.window)
 
-    def _on_key(self, window, key, scancode, action, mods):
-        self.impl.keyboard_callback(window, key, scancode,\
-                                    action, mods)
-        self.on_key(key, scancode, action, mods)
+    def _on_key(self, window, *args): 
+        self.impl.keyboard_callback(window, *args) 
+        self.on_key(*args) 
 
     def _on_char(self, window, codepoint):
         self.impl.char_callback(window, codepoint)
         self.on_char(codepoint)
 
-    def _on_mouse_move(self, window, x, y):
-        self.impl.mouse_callback(window, x, y)
-        self.on_mouse_move(x, y)
+    def _on_mouse_move(self, window, *args): 
+        self.impl.mouse_callback(window, *args)
+        self.on_mouse_move(*args)
 
     def _on_mouse_button(self, window, button, action, mods):
         if not get_io().want_capture_mouse:
             self.on_mouse_button(button, action, mods)
 
-    def _on_scroll(self, window, xoffset, yoffset):
-        self.impl.scroll_callback(window, xoffset, yoffset)
-        self.on_scroll(xoffset, yoffset)
+    def _on_scroll(self, window, *args): 
+        self.impl.scroll_callback(window, *args)
+        self.on_scroll(*args) 
 
-    def _on_resize(self, window, width, height):
-        self.impl.resize_callback(window, width, height)
-        self.on_resize(width, height)
+    def _on_resize(self, window, *args): 
+        self.impl.resize_callback(window, *args) 
+        self.on_resize(*args) 
 
     def on_char(self, codepoint): #necesario
         pass
@@ -168,7 +167,7 @@ def perspective(fovy, aspect, near, far):
     return _perspective(near, far, top, -top, -right, right)
 
 class Camera:
-    def __init__(self, width, height):
+    def __init__(self, *args): 
         self.sensitivity, self.zoom_sensitivity, self.momentum,\
                           self._zoom, self.rot,\
                           self.previous_mouse_pos,\
@@ -178,7 +177,7 @@ class Camera:
                           1/100, 1/10, 0.93, 2,\
                           Rotation.identity(), None, None, 0, 0
 
-        self.resize(width, height)
+        self.resize(*args)
 
     def resize(self, width, height):
         self.perspectiveMatrix = perspective(radians(80),\
@@ -188,7 +187,7 @@ class Camera:
     def zoom(self, steps):
         self._zoom *= (1 - self.zoom_sensitivity) ** steps
 
-    def update(self, time, delta_time):
+    def update(self, *args): 
         if self.angular_velocity and not self.previous_mouse_pos: #!!!!!!'''
             self._damping()
         
@@ -213,8 +212,8 @@ class Camera:
         if "uViewMatrix" in program:
             program["uViewMatrix"].write(self.viewMatrix.T.astype('f4').tobytes())
 
-    def start_rotation(self, x, y):
-        self.previous_mouse_pos = x, y
+    def start_rotation(self, *args): 
+        self.previous_mouse_pos = args 
 
     def update_rotation(self, *args): 
         if self.previous_mouse_pos: 
@@ -225,9 +224,13 @@ class Camera:
         self.previous_mouse_pos = None
 
     def _rotate(self, dx, dy):
+        from numpy import clip, pi
         self.rot_around_vertical += dx * self.sensitivity
         self.rot_around_horizontal += dy * self.sensitivity
-        self.rot_around_horizontal = np.clip(self.rot_around_horizontal, -np.pi / 2, np.pi / 2)
+        pi_Medios = pi / 2
+        self.rot_around_horizontal =\
+                                clip(self.rot_around_horizontal,\
+                                     -pi_Medios, pi_Medios)
         self.angular_velocity = dx, dy
 
     def _damping(self):
@@ -236,8 +239,6 @@ class Camera:
             self.angular_velocity = None
         else:
             self._rotate(dx * self.momentum, dy * self.momentum)
-
-
 
 class MyApp(App):
     def init(self):
@@ -316,9 +317,9 @@ class MyApp(App):
         # Initialize some value used in the UI
         self.camera, self.some_slider = Camera(w, h), 0.42
         
-    def update(self, time, delta_time):
+    def update(self, *args): 
         # Update damping effect (and internal matrices)
-        self.camera.update(time, delta_time)
+        self.camera.update(*args) 
 
     def render(self):
         ctx = self.ctx
@@ -327,23 +328,24 @@ class MyApp(App):
         ctx.enable_only(DEPTH_TEST | CULL_FACE)
         self.rendered_mesh.render(ctx)
 
-    def on_key(self, key, scancode, action, mods):
+    def on_key(self, key, *args): 
         if key == KEY_ESCAPE:
             self.should_close()
 
-    def on_mouse_move(self, x, y):
-        self.camera.update_rotation(x, y)
+    def on_mouse_move(self, *args): 
+        self.camera.update_rotation(*args) 
 
     def on_mouse_button(self, button, action, mods):
-        if action == PRESS and button == MOUSE_BUTTON_LEFT:
-            self.camera.start_rotation(*self.mouse_pos())
+        if button == MOUSE_BUTTON_LEFT:
+            if action == PRESS:
+                self.camera.start_rotation(*self.mouse_pos())
 
-        if action == RELEASE and button == MOUSE_BUTTON_LEFT:
-            self.camera.stop_rotation()
+            if action == RELEASE:
+                self.camera.stop_rotation()
 
-    def on_resize(self, width, height):
-        self.camera.resize(width, height)
-        self.ctx.viewport = (0, 0, width, height)
+    def on_resize(self, *args): 
+        self.camera.resize(*args) 
+        self.ctx.viewport = (0, 0, *args) 
 
     def on_scroll(self, x, y):
         self.camera.zoom(y)
