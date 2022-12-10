@@ -1,10 +1,22 @@
-from moderngl import DEPTH_TEST, CULL_FACE, TRIANGLES
 from glfw import KEY_ESCAPE, PRESS, MOUSE_BUTTON_LEFT, RELEASE,\
-                 MOUSE_BUTTON_LEFT
+                 MOUSE_BUTTON_LEFT, init, create_window,\
+                 make_context_current, set_key_callback,\
+                 set_cursor_pos_callback,\
+                 set_mouse_button_callback,\
+                 set_window_size_callback, set_char_callback,\
+                 set_scroll_callback, terminate, get_time,\
+                 window_should_close, poll_events, swap_buffers,\
+                 terminate, set_window_should_close,\
+                 get_cursor_pos, get_window_size
 from numpy import ones, array
 from imgui import begin_main_menu_bar, begin_menu, end_menu,\
                   end_main_menu_bar, begin, slider_float, end,\
-                  menu_item
+                  menu_item, new_frame, render, get_draw_data,\
+                  get_io
+from moderngl import DEPTH_TEST, CULL_FACE, TRIANGLES
+from moderngl import create_context as mgl_C_C
+from imgui import    create_context as imgui_C_C
+from imgui.integrations.glfw import GlfwRenderer
 from pywavefront import Wavefront
 
 class Mesh:
@@ -48,23 +60,6 @@ class RenderedMesh:
     def render(self, ctx):
         self.vao.render(TRIANGLES)
 
-import glfw
-from glfw import init, create_window, make_context_current,\
-                 set_key_callback, set_cursor_pos_callback,\
-                 set_mouse_button_callback,\
-                 set_window_size_callback, set_char_callback,\
-                 set_scroll_callback, terminate, get_time,\
-                 window_should_close, poll_events
-import moderngl
-from moderngl import create_context as mgl_C_C
-import imgui
-from imgui import create_context as imgui_C_C
-from imgui import new_frame, render, get_draw_data, get_io
-from imgui.integrations.glfw import GlfwRenderer as ImguiRenderer
-from glfw import swap_buffers, terminate,\
-                 set_window_should_close, get_cursor_pos,\
-                 get_window_size
-
 class App:
     def __init__(self, width = 640, height = 480,\
                  title = "Hello world"):    
@@ -78,7 +73,7 @@ class App:
                 make_context_current(self.window)
                 
                 self.ctx = mgl_C_C(require = 460)
-                self.impl = ImguiRenderer(self.window,\
+                self.impl = GlfwRenderer(self.window,\
                                           attach_callbacks =\
                                           False)
                 set_key_callback(self.window, self._on_key)
@@ -153,76 +148,45 @@ class App:
         self.impl.resize_callback(window, width, height)
         self.on_resize(width, height)
 
-    '''def init(self):
+    def on_char(self, codepoint): #necesario
         pass
-
-    def update(self, time):
-        pass
-
-    def render(self):
-        pass
-
-    def ui(self):
-        pass
-
-    def on_key(self, key, scancode, action, mods):
-        pass
-
-    def on_char(self, codepoint):
-        pass
-
-    def on_mouse_move(self, x, y):
-        pass
-
-    def on_mouse_button(self, button, action, mods):
-        pass
-
-    def on_scroll(self, xoffset, yoffset):
-        pass
-
-    def on_resize(self, width, height):
-        pass'''
 
 import numpy as np
 from scipy.spatial.transform import Rotation
-
-
-import numpy as np
+from numpy import array, tan, radians
 
 def _perspective(n, f, t, b, l, r):
-    return np.array([
-        [ 2*n/(r-l),     0    ,   (r+l)/(r-l) ,       0        ],
-        [     0    , 2*n/(t-b),   (t+b)/(t-b) ,       0        ],
-        [     0    ,     0    , -((f+n)/(f-n)), -(2*n*f/(f-n)) ],
-        [     0    ,     0    ,       -1      ,       0        ],
-    ])
+    return array(((2 / (r - l) * n, 0, (r + l) / (r - l), 0),
+                  (0, 2 / (t - b) * n, (t + b) / (t - b), 0),
+                  (0, 0, -(f + n) / (f - n),\
+                   -2 * n * f / (f - n)), (0, 0, -1, 0)))
 
 def perspective(fovy, aspect, near, far):
-    top = near * np.tan(fovy / 2)
+    top = near * tan(fovy / 2)
     right = top * aspect
+    
     return _perspective(near, far, top, -top, -right, right)
-
-
 
 class Camera:
     def __init__(self, width, height):
-        self.sensitivity = 0.01
-        self.zoom_sensitivity = 0.1
-        self.momentum = 0.93
+        self.sensitivity, self.zoom_sensitivity, self.momentum,\
+                          self._zoom, self.rot,\
+                          self.previous_mouse_pos,\
+                          self.angular_velocity,\
+                          self.rot_around_vertical,\
+                          self.rot_around_horizontal =\
+                          1/100, 1/10, 0.93, 2,\
+                          Rotation.identity(), None, None, 0, 0
 
-        self._zoom = 2
-        self.rot = Rotation.identity()
-        self.previous_mouse_pos = None
-        self.angular_velocity = None
-        self.rot_around_vertical = 0
-        self.rot_around_horizontal = 0
         self.resize(width, height)
 
     def resize(self, width, height):
-        self.perspectiveMatrix = perspective(np.radians(80), width/height, 0.01, 100.0)
+        self.perspectiveMatrix = perspective(radians(80),\
+                                             width / height,\
+                                             1/100, 100)
 
     def zoom(self, steps):
-        self._zoom *= pow(1 - self.zoom_sensitivity, steps)
+        self._zoom *= (1 - self.zoom_sensitivity) ** steps
 
     def update(self, time, delta_time):
         if self.previous_mouse_pos is None and self.angular_velocity is not None:
