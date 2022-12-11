@@ -169,15 +169,13 @@ class Camera:
         if self.angular_velocity and not self.previous_mouse_pos: #!!!!!!'''
             self._damping()
         
-        self.rot = Rotation.identity() *\
-                Rotation.from_rotvec(self.rot_around_horizontal *\
-                                            array((1, 0, 0))) *\
-                Rotation.from_rotvec(self.rot_around_vertical *\
-                                            array((0, 1, 0)))
-        '''rot, rot1 = (*(\
-                Rotation.from_rotvec(self.rot_around_horizontal *\
-           vec) for vec in (array((1, 0, 0)), array((0, 1, 0)))),)             
-        self.rot = Rotation.identity() * rot * rot1'''
+        rot, rot1 = (*(\
+                Rotation.from_rotvec(eje * vec) for eje, vec in\
+                ((self.rot_around_horizontal, array((1, 0, 0))),\
+                 (self.rot_around_vertical, array((0, 1, 0))))),)
+
+        self.rot = Rotation.identity() * rot * rot1
+        
         viewMatrix = eye(4)
         viewMatrix[:3, :3] = self.rot.as_matrix()
         viewMatrix[:3, 3] = 0, 0, -self._zoom
