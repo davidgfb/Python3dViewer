@@ -50,10 +50,9 @@ class RenderedMesh:
               ((self.vboP, "in_vert"), (self.vboN, "in_normal"))))
         
     def release(self): #?
-        self.vboP.release()
-        self.vboN.release()
-        self.vao.release()
-
+        (*(a.release() for a in\
+                               (self.vboP, self.vboN, self.vao)),)
+        
     def render(self, ctx):
         self.vao.render(TRIANGLES)
 
