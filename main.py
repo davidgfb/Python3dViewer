@@ -31,7 +31,6 @@ class ObjMesh(Mesh):
     Only load the first mesh of the file if there are more than one."""
     def __init__(self, filepath):
         for material in Wavefront(filepath).materials.values(): #una vez: material = scene.materials.values()
-            #assert(material.vertex_format == "N3F_V3F")  # T2F, C3F, N3F and V3F may appear in this string  
             data = array(material.vertices).reshape(-1, 6)
             self.P, self.N = data[:, 3:], data[:, :3]
 
@@ -44,7 +43,7 @@ class RenderedMesh:
     def __init__(self, ctx, mesh, program):
         self.mesh, (self.vboP, self.vboN) = mesh,\
                    (*(ctx.buffer(a.astype('f4').tobytes()) for\
-                      a in (mesh.P, mesh.N)),)
+                                          a in (mesh.P, mesh.N)),)
         self.vao =\
         ctx.vertex_array(program, ((a[0], '3f', a[1]) for a in\
               ((self.vboP, "in_vert"), (self.vboN, "in_normal"))))
@@ -63,22 +62,21 @@ class App:
 
         if init():
             self.window = create_window(width, height, title,\
-                                        None, None)
+                                                    None, None)
 
             if self.window:
                 make_context_current(self.window)
                 
-                self.ctx = mgl_C_C(require = 460)
-                self.impl = GlfwRenderer(self.window,\
-                                          attach_callbacks =\
-                                          False)
+                self.ctx, self.impl = mgl_C_C(require = 460),\
+                    GlfwRenderer(self.window, attach_callbacks =\
+                                                          False)
                 set_key_callback(self.window, self._on_key)
                 set_cursor_pos_callback(self.window,\
-                                        self._on_mouse_move)
+                                            self._on_mouse_move)
                 set_mouse_button_callback(self.window,\
                                           self._on_mouse_button)
                 set_window_size_callback(self.window,\
-                                         self._on_resize)
+                                                 self._on_resize)
                 set_char_callback(self.window, self._on_char)
                 set_scroll_callback(self.window, self._on_scroll)
 
@@ -125,7 +123,7 @@ class App:
 
     def _on_char(self, window, codepoint):
         self.impl.char_callback(window, codepoint)
-        self.on_char(codepoint)
+        #self.on_char(codepoint)
 
     def _on_mouse_move(self, window, *args): 
         self.impl.mouse_callback(window, *args)
@@ -141,12 +139,7 @@ class App:
 
     def _on_resize(self, window, *args): 
         self.impl.resize_callback(window, *args) 
-        self.on_resize(*args) 
-
-    def on_char(self, codepoint): #necesario
-        pass
-
-
+        self.on_resize(*args)
 
 def _perspective(n, f, t, b, l, r):
     return array(((2 / (r - l) * n, 0, (r + l) / (r - l), 0),
@@ -365,6 +358,6 @@ class MyApp(App):
 
         end()
 
-MyApp(1280, 720, "Python 3d Viewer - Elie Michel").main_loop()
+MyApp(1280, 720, "Python 3d Viewer").main_loop()
 
 
