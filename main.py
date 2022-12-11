@@ -30,17 +30,13 @@ class ObjMesh(Mesh):
     """An example of mesh loader, using the pywavefront module.
     Only load the first mesh of the file if there are more than one."""
     def __init__(self, filepath):
-        print(f"Loading mesh from {filepath}...")
-
-        scene = Wavefront(filepath)
-
-        for name, material in scene.materials.items(): #una vez       
-            assert(material.vertex_format == "N3F_V3F")  # T2F, C3F, N3F and V3F may appear in this string
-            
+        for material in Wavefront(filepath).materials.values(): #una vez: material = scene.materials.values()
+            #assert(material.vertex_format == "N3F_V3F")  # T2F, C3F, N3F and V3F may appear in this string  
             data = array(material.vertices).reshape(-1, 6)
             self.P, self.N = data[:, 3:], data[:, :3]
 
-        print(f"(Object has {len(self.P)//3} points)")
+        print(f"Loading mesh from {filepath}...\n\
+              (Object has {len(self.P)//3} points)")
 
 class RenderedMesh:
     """The equivalent of a Mesh, but stored in OpenGL buffers (on the GPU)
