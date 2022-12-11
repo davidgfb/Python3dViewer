@@ -42,13 +42,13 @@ class RenderedMesh:
     """The equivalent of a Mesh, but stored in OpenGL buffers (on the GPU)
     ready to be rendered."""
     def __init__(self, ctx, mesh, program):
-        self.mesh, self.vboP, self.vboN = mesh,\
-                       ctx.buffer(mesh.P.astype('f4').tobytes()),\
-                       ctx.buffer(mesh.N.astype('f4').tobytes())
-        self.vao = ctx.vertex_array(program,\
-                                [(self.vboP, "3f", "in_vert"),\
-                                 (self.vboN, "3f", "in_normal")])
-
+        self.mesh, (self.vboP, self.vboN) = mesh,\
+                   (*(ctx.buffer(a.astype('f4').tobytes()) for\
+                      a in (mesh.P, mesh.N)),)
+        self.vao =\
+        ctx.vertex_array(program, ((a[0], '3f', a[1]) for a in\
+              ((self.vboP, "in_vert"), (self.vboN, "in_normal"))))
+        
     def release(self): #?
         self.vboP.release()
         self.vboN.release()
