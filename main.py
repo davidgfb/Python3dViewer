@@ -169,13 +169,12 @@ class Camera:
         if self.angular_velocity and not self.previous_mouse_pos: #!!!!!!'''
             self._damping()
         
-        rot, rot1 = (*(\
-                Rotation.from_rotvec(eje * vec) for eje, vec in\
-                ((self.rot_around_horizontal, array((1, 0, 0))),\
-                 (self.rot_around_vertical, array((0, 1, 0))))),)
+        rot, rot1 =\
+             (*(Rotation.from_rotvec(eje * vec) for eje, vec in\
+              ((self.rot_around_horizontal, array((1, 0, 0))),\
+               (self.rot_around_vertical, array((0, 1, 0))))),)
 
-        self.rot = Rotation.identity() * rot * rot1
-        
+        self.rot = Rotation.identity() * rot * rot1    
         viewMatrix = eye(4)
         viewMatrix[:3, :3] = self.rot.as_matrix()
         viewMatrix[:3, 3] = 0, 0, -self._zoom
@@ -194,19 +193,22 @@ class Camera:
     def update_rotation(self, *args): 
         if self.previous_mouse_pos: 
             self._rotate(*array(args) - self.previous_mouse_pos)
+
             self.previous_mouse_pos = args
 
-    def stop_rotation(self):
-        self.previous_mouse_pos = None
+    '''def stop_rotation(self):
+        self.previous_mouse_pos = None'''
 
-    def _rotate(self, dx, dy):
-        self.rot_around_vertical += dx * self.sensitivity
-        self.rot_around_horizontal += dy * self.sensitivity
+    def _rotate(self, *args):
+        rotations = self.rot_around_vertical, self.rot_around_horizontal
+        rotations += self.sensitivity * array(args)
+        self.rot_around_vertical, self.rot_around_horizontal =\
+                                  rotations
         pi_Medios = pi / 2
         self.rot_around_horizontal =\
                                 clip(self.rot_around_horizontal,\
                                      -pi_Medios, pi_Medios)
-        self.angular_velocity = dx, dy
+        self.angular_velocity = args
 
     def _damping(self):
         dx, dy = self.angular_velocity
@@ -317,7 +319,7 @@ class MyApp(App):
                 self.camera.start_rotation(*get_cursor_pos(self.window))
 
             if action == RELEASE:
-                self.camera.stop_rotation()
+                self.camera.previous_mouse_pos = None #no mola
 
     def on_resize(self, *args): 
         self.camera.resize(*args) 
