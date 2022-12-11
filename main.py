@@ -111,27 +111,20 @@ class App:
     def should_close(self):
         set_window_should_close(self.window, True)
 
-    '''def mouse_pos(self):
-        return get_cursor_pos(self.window)
-
-    def size(self):
-        return get_window_size(self.window)'''
-
     def _on_key(self, window, *args): 
         self.impl.keyboard_callback(window, *args) 
         self.on_key(*args) 
 
     def _on_char(self, *args): 
         self.impl.char_callback(args) 
-        #self.on_char(codepoint)
 
     def _on_mouse_move(self, window, *args): 
         self.impl.mouse_callback(window, *args)
         self.on_mouse_move(*args)
 
-    def _on_mouse_button(self, window, button, action, mods):
+    def _on_mouse_button(self, window, *args): #button, action, mods):
         if not get_io().want_capture_mouse:
-            self.on_mouse_button(button, action, mods)
+            self.on_mouse_button(*args)
 
     def _on_scroll(self, window, *args): 
         self.impl.scroll_callback(window, *args)
@@ -141,17 +134,15 @@ class App:
         self.impl.resize_callback(window, *args) 
         self.on_resize(*args)
 
-def _perspective(n, f, t, b, l, r):
+def perspective(fovy, aspect, near, far):
+    top = near * tan(fovy / 2)
+    right = top * aspect
+    n, f, t, b, l, r = near, far, top, -top, -right, right
+    
     return array(((2 / (r - l) * n, 0, (r + l) / (r - l), 0),
                   (0, 2 / (t - b) * n, (t + b) / (t - b), 0),
                   (0, 0, -(f + n) / (f - n),\
                    -2 * n * f / (f - n)), (0, 0, -1, 0)))
-
-def perspective(fovy, aspect, near, far):
-    top = near * tan(fovy / 2)
-    right = top * aspect
-    
-    return _perspective(near, far, top, -top, -right, right)
 
 class Camera:
     def __init__(self, *args): 
