@@ -111,18 +111,18 @@ class App:
     def should_close(self):
         set_window_should_close(self.window, True)
 
-    def mouse_pos(self):
+    '''def mouse_pos(self):
         return get_cursor_pos(self.window)
 
     def size(self):
-        return get_window_size(self.window)
+        return get_window_size(self.window)'''
 
     def _on_key(self, window, *args): 
         self.impl.keyboard_callback(window, *args) 
         self.on_key(*args) 
 
-    def _on_char(self, window, codepoint):
-        self.impl.char_callback(window, codepoint)
+    def _on_char(self, *args): 
+        self.impl.char_callback(args) 
         #self.on_char(codepoint)
 
     def _on_mouse_move(self, window, *args): 
@@ -299,7 +299,8 @@ class MyApp(App):
         # Create the rendered mesh from the mesh and the program
         # Setup camera
         self.rendered_mesh, (w, h) = RenderedMesh(ctx, self.mesh,\
-                                        self.program), self.size()
+                                     self.program),\
+                                     get_window_size(self.window)
         # Initialize some value used in the UI
         self.camera, self.some_slider = Camera(w, h), 0.42
         
@@ -324,7 +325,7 @@ class MyApp(App):
     def on_mouse_button(self, button, action, mods):
         if button == MOUSE_BUTTON_LEFT:
             if action == PRESS:
-                self.camera.start_rotation(*self.mouse_pos())
+                self.camera.start_rotation(*get_cursor_pos(self.window))
 
             if action == RELEASE:
                 self.camera.stop_rotation()
