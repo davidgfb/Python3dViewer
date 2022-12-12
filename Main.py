@@ -8,7 +8,7 @@ from glfw import KEY_ESCAPE, PRESS, MOUSE_BUTTON_LEFT, RELEASE,\
                  window_should_close, poll_events, swap_buffers,\
                  terminate, set_window_should_close,\
                  get_cursor_pos, get_window_size
-from numpy import ones, array, eye, tan, radians, clip, pi
+from numpy import ones, array, eye, tan, radians, clip, pi, sum, square
 from imgui import begin_main_menu_bar, begin_menu, end_menu,\
                   end_main_menu_bar, begin, slider_float, end,\
                   menu_item, new_frame, render, get_draw_data,\
@@ -196,14 +196,10 @@ class Camera:
 
             self.previous_mouse_pos = args
 
-    '''def stop_rotation(self):
-        self.previous_mouse_pos = None'''
-
     def _rotate(self, *args):
-        rotations = self.rot_around_vertical, self.rot_around_horizontal
-        rotations += self.sensitivity * array(args)
         self.rot_around_vertical, self.rot_around_horizontal =\
-                                  rotations
+                                                self.sensitivity * array(args) +\
+                            (self.rot_around_vertical, self.rot_around_horizontal)
         pi_Medios = pi / 2
         self.rot_around_horizontal =\
                                 clip(self.rot_around_horizontal,\
@@ -211,11 +207,11 @@ class Camera:
         self.angular_velocity = args
 
     def _damping(self):
-        dx, dy = self.angular_velocity
-        if dx * dx + dy * dy < 1e-6:
+        if sum(square(self.angular_velocity)) < 1e-6:
             self.angular_velocity = None
+
         else:
-            self._rotate(dx * self.momentum, dy * self.momentum)
+            self._rotate(*self.momentum * array(self.angular_velocity))
 
 class MyApp(App):
     def init(self):
