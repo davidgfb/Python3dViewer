@@ -223,7 +223,7 @@ class MyApp(App):
         # Load a mesh
         # Load the glsl program
         self.mesh, self.program =\
-                   ObjMesh("sample-data/dragon.obj"),\
+                   ObjMesh("dragon.obj"),\
                    ctx.program(vertex_shader =\
         '''#version 460
         in vec3 in_vert, in_normal;
