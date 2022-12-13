@@ -322,11 +322,10 @@ class MyApp(App):
         }''')
         # Create the rendered mesh from the mesh and the program
         # Setup camera
-        self.rendered_mesh, (w, h) = RenderedMesh(ctx, self.mesh,\
-                                     self.program),\
-                                     get_window_size(self.window)
         # Initialize some value used in the UI
-        self.camera, self.some_slider = Camera(w, h), 0.42
+        self.rendered_mesh, self.camera, self.some_slider =\
+                            RenderedMesh(ctx, self.mesh, self.program),\
+                            Camera(*get_window_size(self.window)), 0.42
 
 MyApp(1280, 720, "Python 3d Viewer").main_loop()
 
