@@ -54,9 +54,6 @@ class RenderedMesh:
 
     def get_Vao(self):
         return self.vao
-        
-    '''def render(self, ctx):
-        self.vao.render(TRIANGLES)'''
 
 class App:
     def __init__(self, width = 640, height = 480,\
@@ -101,7 +98,14 @@ class App:
                         current_time - previous_time, current_time
 
             self.update(current_time, delta_time)
-            self.render()
+
+            ctx = self.ctx
+
+            self.camera.set_uniforms(self.program)
+            ctx.screen.clear(*ones(3), -1) 
+            ctx.enable_only(DEPTH_TEST | CULL_FACE)
+            self.rendered_mesh.get_Vao().render(TRIANGLES)
+           
             new_frame()
 
             """Use the imgui module here to draw the UI"""
@@ -124,7 +128,6 @@ class App:
 
             end()
             
-            #self.ui()
             render()
             self.impl.render(get_draw_data())    
             swap_buffers(self.window)
@@ -146,9 +149,15 @@ class App:
         self.impl.mouse_callback(window, *args)
         self.on_mouse_move(*args)
 
-    def _on_mouse_button(self, window, *args): #button, action, mods):
+    def _on_mouse_button(self, window, button, action, mods):
         if not get_io().want_capture_mouse:
-            self.on_mouse_button(*args)
+            if button == MOUSE_BUTTON_LEFT:
+                p_M_P = None #no mola
+                
+                if action:
+                    p_M_P = get_cursor_pos(self.window)
+
+                self.camera.previous_mouse_pos = p_M_P
 
     def _on_scroll(self, window, *args): 
         self.impl.scroll_callback(window, *args)
@@ -321,28 +330,12 @@ class MyApp(App):
         # Update damping effect (and internal matrices)
         self.camera.update(*args) 
 
-    def render(self):
-        ctx = self.ctx
-
-        self.camera.set_uniforms(self.program)
-        ctx.screen.clear(*ones(3), -1) 
-        ctx.enable_only(DEPTH_TEST | CULL_FACE)
-        self.rendered_mesh.get_Vao().render(TRIANGLES)
-
     def on_key(self, key, *args): 
         if key == KEY_ESCAPE:
             self.should_close()
 
     def on_mouse_move(self, *args): 
         self.camera.update_rotation(*args) 
-
-    def on_mouse_button(self, button, action, mods):
-        if button == MOUSE_BUTTON_LEFT:
-            if action == PRESS:
-                self.camera.previous_mouse_pos = get_cursor_pos(self.window)
-
-            if action == RELEASE:
-                self.camera.previous_mouse_pos = None #no mola 
 
 MyApp(1280, 720, "Python 3d Viewer").main_loop()
 
