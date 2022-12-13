@@ -149,7 +149,11 @@ class App:
 
     def _on_mouse_move(self, window, *args): 
         self.impl.mouse_callback(window, *args)
-        self.camera.update_rotation(*args) 
+
+        if self.camera.previous_mouse_pos: 
+            self.camera._rotate(*array(args) - self.camera.previous_mouse_pos)
+
+            self.camera.previous_mouse_pos = args
 
     def _on_mouse_button(self, window, button, action, mods):
         if not get_io().want_capture_mouse:
@@ -204,7 +208,12 @@ class Camera:
 
     def update(self, *args): 
         if self.angular_velocity and not self.previous_mouse_pos: #!!!!!!'''
-            self._damping()
+
+            if sum(square(self.angular_velocity)) < 1e-6:
+                self.angular_velocity = None
+
+            else:
+                self._rotate(*self.momentum * array(self.angular_velocity))
         
         rot, rot1 =\
              (*(Rotation.from_rotvec(eje * vec) for eje, vec in\
@@ -224,15 +233,6 @@ class Camera:
         if "uViewMatrix" in program:
             program["uViewMatrix"].write(self.viewMatrix.T.astype('f4').tobytes())
 
-    '''def start_rotation(self, *args): 
-        self.previous_mouse_pos = args''' 
-
-    def update_rotation(self, *args): 
-        if self.previous_mouse_pos: 
-            self._rotate(*array(args) - self.previous_mouse_pos)
-
-            self.previous_mouse_pos = args
-
     def _rotate(self, *args):
         self.rot_around_vertical, self.rot_around_horizontal =\
                                                 self.sensitivity * array(args) +\
@@ -243,18 +243,11 @@ class Camera:
                                      -pi_Medios, pi_Medios)
         self.angular_velocity = args
 
-    def _damping(self):
-        if sum(square(self.angular_velocity)) < 1e-6:
-            self.angular_velocity = None
-
-        else:
-            self._rotate(*self.momentum * array(self.angular_velocity))
-
 class MyApp(App):
     def init(self):
         ctx = self.ctx
-        # Load a mesh
-        # Load the glsl program
+        ''' Load a mesh
+         Load the glsl program'''
         self.mesh, self.program =\
                    ObjMesh("dragon.obj"),\
                    ctx.program(vertex_shader =\
@@ -320,9 +313,9 @@ class MyApp(App):
 
             f_color = vec4(c / 2, uColor.a);
         }''')
-        # Create the rendered mesh from the mesh and the program
-        # Setup camera
-        # Initialize some value used in the UI
+        ''' Create the rendered mesh from the mesh and the program
+         Setup camera
+         Initialize some value used in the UI'''
         self.rendered_mesh, self.camera, self.some_slider =\
                             RenderedMesh(ctx, self.mesh, self.program),\
                             Camera(*get_window_size(self.window)), 0.42
