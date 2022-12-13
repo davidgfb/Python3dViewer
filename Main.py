@@ -187,8 +187,8 @@ class Camera:
         if "uViewMatrix" in program:
             program["uViewMatrix"].write(self.viewMatrix.T.astype('f4').tobytes())
 
-    def start_rotation(self, *args): 
-        self.previous_mouse_pos = args 
+    '''def start_rotation(self, *args): 
+        self.previous_mouse_pos = args''' 
 
     def update_rotation(self, *args): 
         if self.previous_mouse_pos: 
@@ -312,13 +312,14 @@ class MyApp(App):
     def on_mouse_button(self, button, action, mods):
         if button == MOUSE_BUTTON_LEFT:
             if action == PRESS:
-                self.camera.start_rotation(*get_cursor_pos(self.window))
+                self.camera.previous_mouse_pos = get_cursor_pos(self.window)
 
             if action == RELEASE:
                 self.camera.previous_mouse_pos = None #no mola
 
     def on_resize(self, *args): 
         self.camera.resize(*args) 
+
         self.ctx.viewport = (0, 0, *args) 
 
     def on_scroll(self, x, y):
@@ -339,9 +340,8 @@ class MyApp(App):
             end_main_menu_bar()
 
         begin("Hello, world!", True)
-        self.shape_need_update = False
-        changed, self.some_slider =\
-                 slider_float("Some Slider", self.some_slider,
+        self.shape_need_update, (changed, self.some_slider) = False,\
+                   slider_float("Some Slider", self.some_slider,
                    min_value = 0, max_value = 1, format = "%.02f")
 
         end()
