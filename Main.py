@@ -51,9 +51,12 @@ class RenderedMesh:
     def release(self): #?
         (*(a.release() for a in\
                                (self.vboP, self.vboN, self.vao)),)
+
+    def get_Vao(self):
+        return self.vao
         
-    def render(self, ctx):
-        self.vao.render(TRIANGLES)
+    '''def render(self, ctx):
+        self.vao.render(TRIANGLES)'''
 
 class App:
     def __init__(self, width = 640, height = 480,\
@@ -300,7 +303,7 @@ class MyApp(App):
         self.camera.set_uniforms(self.program)
         ctx.screen.clear(*ones(3), -1) 
         ctx.enable_only(DEPTH_TEST | CULL_FACE)
-        self.rendered_mesh.render(ctx)
+        self.rendered_mesh.get_Vao().render(TRIANGLES)
 
     def on_key(self, key, *args): 
         if key == KEY_ESCAPE:
