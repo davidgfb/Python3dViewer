@@ -152,12 +152,13 @@ class App:
 
     def _on_scroll(self, window, *args): 
         self.impl.scroll_callback(window, *args)
-        self.camera.zoom(args[2])
-        #self.on_scroll(*args) 
+        self.camera.zoom(args[1])
 
     def _on_resize(self, window, *args): 
-        self.impl.resize_callback(window, *args) 
-        self.on_resize(*args)
+        self.impl.resize_callback(window, *args)
+        self.camera.resize(*args) 
+
+        self.ctx.viewport = (0, 0, *args) 
 
 def perspective(fovy, aspect, near, far):
     top = near * tan(fovy / 2)
@@ -341,36 +342,7 @@ class MyApp(App):
                 self.camera.previous_mouse_pos = get_cursor_pos(self.window)
 
             if action == RELEASE:
-                self.camera.previous_mouse_pos = None #no mola
-
-    def on_resize(self, *args): 
-        self.camera.resize(*args) 
-
-        self.ctx.viewport = (0, 0, *args) 
-
-    '''def on_scroll(self, x, y):
-        self.camera.zoom(y)
-
-    def ui(self):
-        """Use the imgui module here to draw the UI"""
-        if begin_main_menu_bar():
-            if begin_menu("File", True):
-                clicked_quit, selected_quit =\
-                    menu_item("Quit", 'Esc', False, True)
-
-                if clicked_quit:
-                    self.should_close()
-
-                end_menu()
-
-            end_main_menu_bar()
-
-        begin("Hello, world!", True)
-        self.shape_need_update, (changed, self.some_slider) = False,\
-                   slider_float("Some Slider", self.some_slider,
-                   min_value = 0, max_value = 1, format = "%.02f")
-
-        end()'''
+                self.camera.previous_mouse_pos = None #no mola 
 
 MyApp(1280, 720, "Python 3d Viewer").main_loop()
 
