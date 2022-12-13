@@ -48,9 +48,9 @@ class RenderedMesh:
         ctx.vertex_array(program, ((a[0], '3f', a[1]) for a in\
               ((self.vboP, "in_vert"), (self.vboN, "in_normal"))))
         
-    def release(self): #?
+    '''def release(self): #?
         (*(a.release() for a in\
-                               (self.vboP, self.vboN, self.vao)),)
+                               (self.vboP, self.vboN, self.vao)),)'''
 
     def get_Vao(self):
         return self.vao
@@ -97,11 +97,34 @@ class App:
             delta_time, previous_time =\
                         current_time - previous_time, current_time
 
-            self.camera.update(current_time, delta_time) # Update damping effect (and internal matrices)
+
+            if self.camera.angular_velocity and not self.camera.previous_mouse_pos: #!!!!!!'''
+                if sum(square(self.camera.angular_velocity)) < 1e-6:
+                    self.angular_velocity = None
+
+                else:
+                    self.camera._rotate(*self.camera.momentum *\
+                                        array(self.camera.angular_velocity))
+            
+            rot, rot1 =\
+                 (*(Rotation.from_rotvec(eje * vec) for eje, vec in\
+                  ((self.camera.rot_around_horizontal, array((1, 0, 0))),\
+                   (self.camera.rot_around_vertical, array((0, 1, 0))))),)
+
+            self.rot = Rotation.identity() * rot * rot1    
+            viewMatrix = eye(4)
+            viewMatrix[:3, :3] = self.rot.as_matrix()
+            viewMatrix[:3, 3] = 0, 0, -self.camera._zoom
+            self.camera.viewMatrix = viewMatrix
 
             ctx = self.ctx
 
-            self.camera.set_uniforms(self.program)
+            if "uPerspectiveMatrix" in self.program:
+                self.program["uPerspectiveMatrix"].write(self.camera.perspectiveMatrix.T.astype('f4').tobytes())
+
+            if "uViewMatrix" in self.program:
+                self.program["uViewMatrix"].write(self.camera.viewMatrix.T.astype('f4').tobytes())
+
             ctx.screen.clear(*ones(3), -1) 
             ctx.enable_only(DEPTH_TEST | CULL_FACE)
             self.rendered_mesh.get_Vao().render(TRIANGLES)
@@ -205,33 +228,6 @@ class Camera:
 
     def zoom(self, steps):
         self._zoom *= (1 - self.zoom_sensitivity) ** steps
-
-    def update(self, *args): 
-        if self.angular_velocity and not self.previous_mouse_pos: #!!!!!!'''
-
-            if sum(square(self.angular_velocity)) < 1e-6:
-                self.angular_velocity = None
-
-            else:
-                self._rotate(*self.momentum * array(self.angular_velocity))
-        
-        rot, rot1 =\
-             (*(Rotation.from_rotvec(eje * vec) for eje, vec in\
-              ((self.rot_around_horizontal, array((1, 0, 0))),\
-               (self.rot_around_vertical, array((0, 1, 0))))),)
-
-        self.rot = Rotation.identity() * rot * rot1    
-        viewMatrix = eye(4)
-        viewMatrix[:3, :3] = self.rot.as_matrix()
-        viewMatrix[:3, 3] = 0, 0, -self._zoom
-        self.viewMatrix = viewMatrix
-
-    def set_uniforms(self, program):
-        if "uPerspectiveMatrix" in program:
-            program["uPerspectiveMatrix"].write(self.perspectiveMatrix.T.astype('f4').tobytes())
-
-        if "uViewMatrix" in program:
-            program["uViewMatrix"].write(self.viewMatrix.T.astype('f4').tobytes())
 
     def _rotate(self, *args):
         self.rot_around_vertical, self.rot_around_horizontal =\
