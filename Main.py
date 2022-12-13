@@ -103,7 +103,28 @@ class App:
             self.update(current_time, delta_time)
             self.render()
             new_frame()
-            self.ui()
+
+            """Use the imgui module here to draw the UI"""
+            if begin_main_menu_bar():
+                if begin_menu("File", True):
+                    clicked_quit, selected_quit =\
+                        menu_item("Quit", 'Esc', False, True)
+
+                    if clicked_quit:
+                        self.should_close()
+
+                    end_menu()
+
+                end_main_menu_bar()
+
+            begin("Hello, world!", True)
+            self.shape_need_update, (changed, self.some_slider) = False,\
+                       slider_float("Some Slider", self.some_slider,
+                       min_value = 0, max_value = 1, format = "%.02f")
+
+            end()
+            
+            #self.ui()
             render()
             self.impl.render(get_draw_data())    
             swap_buffers(self.window)
@@ -131,7 +152,8 @@ class App:
 
     def _on_scroll(self, window, *args): 
         self.impl.scroll_callback(window, *args)
-        self.on_scroll(*args) 
+        self.camera.zoom(args[2])
+        #self.on_scroll(*args) 
 
     def _on_resize(self, window, *args): 
         self.impl.resize_callback(window, *args) 
@@ -300,6 +322,7 @@ class MyApp(App):
 
     def render(self):
         ctx = self.ctx
+
         self.camera.set_uniforms(self.program)
         ctx.screen.clear(*ones(3), -1) 
         ctx.enable_only(DEPTH_TEST | CULL_FACE)
@@ -325,7 +348,7 @@ class MyApp(App):
 
         self.ctx.viewport = (0, 0, *args) 
 
-    def on_scroll(self, x, y):
+    '''def on_scroll(self, x, y):
         self.camera.zoom(y)
 
     def ui(self):
@@ -347,7 +370,7 @@ class MyApp(App):
                    slider_float("Some Slider", self.some_slider,
                    min_value = 0, max_value = 1, format = "%.02f")
 
-        end()
+        end()'''
 
 MyApp(1280, 720, "Python 3d Viewer").main_loop()
 
