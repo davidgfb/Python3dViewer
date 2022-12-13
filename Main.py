@@ -97,7 +97,7 @@ class App:
             delta_time, previous_time =\
                         current_time - previous_time, current_time
 
-            self.update(current_time, delta_time)
+            self.camera.update(current_time, delta_time) # Update damping effect (and internal matrices)
 
             ctx = self.ctx
 
@@ -138,16 +138,18 @@ class App:
     def should_close(self):
         set_window_should_close(self.window, True)
 
-    def _on_key(self, window, *args): 
-        self.impl.keyboard_callback(window, *args) 
-        self.on_key(*args) 
+    def _on_key(self, window, key, *args): 
+        self.impl.keyboard_callback(window, key, *args) 
+
+        if key == KEY_ESCAPE:
+            self.should_close()
 
     def _on_char(self, *args): 
         self.impl.char_callback(args) 
 
     def _on_mouse_move(self, window, *args): 
         self.impl.mouse_callback(window, *args)
-        self.on_mouse_move(*args)
+        self.camera.update_rotation(*args) 
 
     def _on_mouse_button(self, window, button, action, mods):
         if not get_io().want_capture_mouse:
@@ -325,17 +327,6 @@ class MyApp(App):
                                      get_window_size(self.window)
         # Initialize some value used in the UI
         self.camera, self.some_slider = Camera(w, h), 0.42
-        
-    def update(self, *args): 
-        # Update damping effect (and internal matrices)
-        self.camera.update(*args) 
-
-    def on_key(self, key, *args): 
-        if key == KEY_ESCAPE:
-            self.should_close()
-
-    def on_mouse_move(self, *args): 
-        self.camera.update_rotation(*args) 
 
 MyApp(1280, 720, "Python 3d Viewer").main_loop()
 
